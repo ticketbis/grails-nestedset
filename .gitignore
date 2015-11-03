@@ -36,3 +36,6 @@
 *.swp
 *.swo
 *.zip.sha1
+
+#project specific files
+test/projects/demo/target
