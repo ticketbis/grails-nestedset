@@ -107,7 +107,7 @@ trait NestedsetTrait {
         return this.class.countByParent(this)
     }
 
-    def getLastChild() {
+    NestedsetTrait getLastChild() {
         if (this.isLeaf()) {
             return null
         }
@@ -266,6 +266,18 @@ trait NestedsetTrait {
             throw new NestedsetException("parent nodes cannot be deleted in leafSafe mode")
         }
 
+        this.withTransaction { status ->
+            lockTree()
+            deleteQueries(node)
+            node.parent?.refresh()
+            unlockTree()
+        }
+    }
+
+    /**
+    * Method required due to weird behaviour of this inside withTransaction
+    **/
+    private static void deleteQueries(NestedsetTrait node){
         String cname = this.simpleName
         def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
         String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
@@ -284,16 +296,10 @@ trait NestedsetTrait {
             where node.lft > ?
         """
 
-        this.withTransaction { status ->
-            lockTree()
-
-            def params = hasLastUpdated ? [new Date(), node.rgt] : [node.rgt]
-            this.executeUpdate(query_del, [node.lft, node.rgt])
-            this.executeUpdate(query_rgt, params)
-            this.executeUpdate(query_lft, params)
-
-            unlockTree()
-        }
+        def params = hasLastUpdated ? [new Date(), node.rgt] : [node.rgt]
+        this.executeUpdate(query_del, [node.lft, node.rgt])
+        this.executeUpdate(query_rgt, params)
+        this.executeUpdate(query_lft, params)
     }
 
     private static boolean isNodeDirty(NestedsetTrait node) {

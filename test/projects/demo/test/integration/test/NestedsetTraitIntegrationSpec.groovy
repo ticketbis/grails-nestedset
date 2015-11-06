@@ -21,10 +21,17 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
     }
 
     def cleanupSpec() {
+        //TODO AKIIIIIIIIIII el parent no refresca su rgt
+        println "PAR: ${parent.lft} - ${parent.rgt}"
+        println "CAT3: ${category2.lft} - ${category2.rgt}"
         Category.deleteNode(category3)
-        //Category.deleteNode(category2)
-        //Category.deleteNode(category)
-        //Category.deleteNode(parent)
+        println "PAR: ${parent.lft} - ${parent.rgt}"
+        println "CAT3: ${category2.lft} - ${category2.rgt}"
+        Category.deleteNode(category2)
+        println "PAR: ${parent.lft} - ${parent.rgt}"
+        Category.deleteNode(category)
+        println "PAR: ${parent.lft} - ${parent.rgt}"
+        Category.deleteNode(parent)
     }
 
     void "test isRootNode"() {
@@ -70,4 +77,32 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
             category2.leafs.collect{it.id} == [category3.id]
             category3.leafs == []
     }
+
+    void "test children"() {
+        expect:
+            parent.children.collect{it.id} == [category.id, category2.id]
+            category.children == []
+            category2.children.collect{it.id} == [category3.id]
+            category3.children == []
+
+            parent.countChildren() == 2
+    }
+
+    void "test lastChild"() {
+        expect:
+            parent.lastChild.id == category2.id
+    }
+
+    void "test getRoot"() {
+        expect:
+            parent.root == null
+            category3.root.id == parent.id
+    }
+
+    void "test isDescendant"() {
+        expect:
+            category.isDescendant(parent) == true
+            parent.isDescendant(category) == false
+    }
+
 }
