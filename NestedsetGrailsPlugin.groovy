@@ -1,3 +1,5 @@
+//import com.ticketbis.nestedset.NestedsetHibernateListener
+
 class NestedsetGrailsPlugin {
     // the plugin version
     def version = "0.1"
@@ -32,33 +34,41 @@ provides nestedset behaviour to domain classes.
     def scm = [ url: "https://github.com/ticketbis/grails-nestedset" ]
 
     def doWithWebDescriptor = { xml ->
-        // TODO Implement additions to web.xml (optional), this event occurs before
     }
 
     def doWithSpring = {
-        // TODO Implement runtime spring config (optional)
     }
 
     def doWithDynamicMethods = { ctx ->
-        // TODO Implement registering dynamic methods to classes (optional)
     }
 
-    def doWithApplicationContext = { ctx ->
-        // TODO Implement post initialization spring config (optional)
+    def doWithApplicationContext = { applicationContext ->
+        //def listeners = applicationContext.sessionFactory.eventListeners
+        //def listener = new NestedsetHibernateListener()
+        //
+        //['preInsert', 'postInsert', 'flushEntity', 'persist'].each({
+        //   addEventTypeListener(listeners, listener, it)
+        //})
+
+    }
+
+    def addEventTypeListener(listeners, listener, type) {
+        def typeProperty = "${type}EventListeners"
+        def typeListeners = listeners."${typeProperty}"
+
+        def expandedTypeListeners = new Object[typeListeners.length + 1]
+        System.arraycopy(typeListeners, 0, expandedTypeListeners, 0, typeListeners.length)
+        expandedTypeListeners[-1] = listener
+
+        listeners."${typeProperty}" = expandedTypeListeners
     }
 
     def onChange = { event ->
-        // TODO Implement code that is executed when any artefact that this plugin is
-        // watching is modified and reloaded. The event contains: event.source,
-        // event.application, event.manager, event.ctx, and event.plugin.
     }
 
     def onConfigChange = { event ->
-        // TODO Implement code that is executed when the project configuration changes.
-        // The event is the same as for 'onChange'.
     }
 
     def onShutdown = { event ->
-        // TODO Implement code that is executed when the application shuts down (optional)
     }
 }

@@ -24,7 +24,7 @@ def mysqlDatabase = env["DATABASE"] ?: "nestedset_demo"
 environments {
     development {
         dataSource {
-            dbCreate = 'update'
+            dbCreate = 'create-drop'
             url = "jdbc:mysql://${mysqlHost}:${mysqlPort}/${mysqlDatabase}?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull"
             driverClassName = 'com.mysql.jdbc.Driver'
             username = mysqlUser

@@ -17,6 +17,7 @@ import org.codehaus.groovy.ast.stmt.*
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.transform.trait.TraitComposer
 import org.codehaus.groovy.ast.tools.GenericsUtils
+import java.lang.reflect.Modifier
 
 import com.ticketbis.nestedset.NestedsetTrait
 
@@ -41,29 +42,30 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
 
         log.info "Adding Nestedset transform to ${ targetClassNode.name }..."
 
-        addFields(targetClassNode)
+        addProperties(targetClassNode)
         addNestedsetTrait(targetClassNode, sourceUnit)
+        addConstraints(targetClassNode)
     }
 
-    private void addFields(ClassNode classNode) {
+    private void addProperties(ClassNode classNode) {
         ['lft', 'rgt', 'depth'].each { field ->
-            NestedsetASTUtils.getOrCreateField(
+            NestedsetASTUtils.getOrCreateProperty(
                 classNode,
                 field,
                 new ConstantExpression(0),
-                FieldNode.ACC_PUBLIC,
-                Integer)
+                Modifier.PUBLIC,
+                ClassHelper.Integer_TYPE)
         }
 
         // parent node
         //def classNodeLnk = ClassHelper.make(classNode.name)
         //classNodeLnk.setRedirect(classNode)
         def classNodeLabel = ClassHelper.makeWithoutCaching(classNode.name)
-        NestedsetASTUtils.getOrCreateField(
+        NestedsetASTUtils.getOrCreateProperty(
             classNode,
             'parent',
             new EmptyExpression(),
-            FieldNode.ACC_PUBLIC,
+            Modifier.PUBLIC,
             classNodeLabel
         )
     }
@@ -77,6 +79,15 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
 
         //NestedsetASTUtils.addTransient(classNode, 'translationsMapCache')
         //NestedsetASTUtils.addTransient(classNode, 'translationByLocale')
+    }
+
+    private void addConstraints(ClassNode classNode) {
+        NestedsetASTUtils.addSettings(
+            'constraints', 
+            classNode, 
+            'parent', 
+            'nullable: true'
+        )
     }
 }
 

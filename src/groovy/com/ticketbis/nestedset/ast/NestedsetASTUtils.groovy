@@ -22,7 +22,7 @@ class NestedsetASTUtils {
             Expression initialExpression,
             int modifiers = FieldNode.ACC_PUBLIC,
             Class fieldType = Object) {
-    
+
         getOrCreateField(classNode,
             fieldName,
             initialExpression,
@@ -51,6 +51,23 @@ class NestedsetASTUtils {
         }
         classNode.getDeclaredField(fieldName)
     }
+
+    static FieldNode getOrCreateProperty(
+            ClassNode classNode,
+            String fieldName,
+            Expression initialExpression,
+            int modifiers,
+            ClassNode fieldType) {
+
+        if (!classNode.getDeclaredField(fieldName)) {
+            classNode.addProperty(fieldName,
+                                  modifiers,
+                                  fieldType,
+                                  initialExpression, null, null)
+        }
+        classNode.getDeclaredField(fieldName)
+    }
+
 
     static FieldNode getOrCreateStaticField(
             ClassNode classNode,
@@ -116,5 +133,61 @@ class NestedsetASTUtils {
         BlockStatement blockStmnt = (BlockStatement) namedQueriesExpr.code
         blockStmnt.addStatement(code)
     }
+
+    static void addSettings(String name, ClassNode classNode, String fieldName, String config) {
+        if (config == null)
+            return
+
+        String configStr = fieldName + " " + config
+
+        BlockStatement newConfig = (BlockStatement) new AstBuilder().buildFromString(configStr).get(0)
+
+        FieldNode closure = classNode.getField(name)
+        if(closure == null) {
+            createStaticClosure(classNode, name)
+            closure = classNode.getField(name)
+            assert closure != null
+        }
+
+        if(!hasFieldInClosure(closure, fieldName)) {
+            ReturnStatement returnStatement = (ReturnStatement) newConfig.getStatements().get(0)
+            ExpressionStatement exStatment = new ExpressionStatement(returnStatement.getExpression())
+            ClosureExpression exp = (ClosureExpression)closure.getInitialExpression()
+            BlockStatement block = (BlockStatement) exp.getCode()
+            block.addStatement(exStatment)
+        }
+
+        assert hasFieldInClosure(closure,fieldName) == true
+    }
+
+    static void createStaticClosure(ClassNode classNode,String name) {
+        FieldNode field = new FieldNode(name, FieldNode.ACC_PUBLIC | FieldNode.ACC_STATIC,
+            new ClassNode(java.lang.Object.class),
+            new ClassNode(classNode.getClass()),
+            null)
+        ClosureExpression expr = new ClosureExpression(Parameter.EMPTY_ARRAY,
+            new BlockStatement())
+        expr.setVariableScope(new VariableScope())
+        field.setInitialValueExpression(expr)
+        classNode.addField(field)
+    }
+
+    static boolean hasFieldInClosure(FieldNode closure, String fieldName) {
+		if(closure != null) {
+			ClosureExpression exp = (ClosureExpression) closure.getInitialExpression()
+			BlockStatement block = (BlockStatement) exp.getCode()
+			List<Statement> ments = block.getStatements()
+			for(Statement expstat : ments) {
+				if(expstat instanceof ExpressionStatement && ((ExpressionStatement)expstat).getExpression() instanceof MethodCallExpression) {
+					MethodCallExpression methexp = (MethodCallExpression)((ExpressionStatement)expstat).getExpression()
+					ConstantExpression conexp = (ConstantExpression)methexp.getMethod()
+					if(conexp.getValue().equals(fieldName)) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
 
 }

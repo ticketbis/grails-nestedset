@@ -8,6 +8,8 @@ import grails.compiler.GrailsCompileStatic
 class Category {
     String name
 
+    Date lastUpdated
+
     static constraints = {
 
     }
