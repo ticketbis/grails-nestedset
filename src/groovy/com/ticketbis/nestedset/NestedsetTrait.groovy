@@ -125,6 +125,15 @@ trait NestedsetTrait {
         return this.lft > node.lft && this.lft < node.rgt
     }
 
+    //def sessionFactory
+    //def propertyInstanceMap = org.codehaus.groovy.grails.plugins.DomainClassGrailsPlugin.PROPERTY_INSTANCE_MAP
+    //def cleanUpGorm() {
+    //    def session = sessionFactory.currentSession
+    //    session.flush()
+    //    session.clear()
+    //    propertyInstanceMap.get().clear()
+    //}
+
 
     /** 
     * Static methods
@@ -147,7 +156,7 @@ trait NestedsetTrait {
     private static void unlockTree() {
         String cname = this.simpleName
         def res = this.executeUpdate("update ${cname} set depth = 1 where depth = -1")
-        if (res == 0) {
+        if (res == 0 && this.countByDepth(1) > 0) {
             throw new NestedsetException("unlocking: nested tree corrupted")
         }
     }
@@ -160,9 +169,19 @@ trait NestedsetTrait {
     static void addNode(NestedsetTrait node) {
         def parent = node.parent
 
+        // nestedset properties could be changed by other node movements
+        if (node.isAttached()) {
+            node.refresh()
+        }
+
         if (node.lft != 0 || node.rgt != 0 || node.depth != 0) {
             throw new NestedsetException("lft, rgt and depth properties cannot be setted explicitly")
         }
+
+        if (parent?.isAttached()) {
+            parent.refresh()
+        }
+
         if (parent && parent.depth == 0) {
             throw new NestedsetException("parent node must be added to the tree first. Use addNode first")
         }
@@ -190,8 +209,6 @@ trait NestedsetTrait {
 
                 move_right(lastRight, 2)
 
-                //parent.refresh()
-
                 def nodeLeft = node.lft
                 def nodeRight = node.rgt
                 node.refresh()
@@ -206,10 +223,11 @@ trait NestedsetTrait {
             }
 
             unlockTree()
-
-            node.refresh()
-            parent?.refresh()
         }
+        
+        parent?.refresh()
+        
+        //node.cleanUpGorm()
     }
 
     private static Long maxRightValue() {
@@ -262,6 +280,9 @@ trait NestedsetTrait {
             throw new NestedsetException("nestedset node properties cannot be modified manually")
         }
 
+        // nestedset properties could be changed by other node movements
+        node.refresh()
+
         if (leafSafe && !node.isLeaf()) {
             throw new NestedsetException("parent nodes cannot be deleted in leafSafe mode")
         }
@@ -269,13 +290,14 @@ trait NestedsetTrait {
         this.withTransaction { status ->
             lockTree()
             deleteQueries(node)
-            node.parent?.refresh()
             unlockTree()
         }
+
+        //node.cleanUpGorm()
     }
 
     /**
-    * Method required due to weird behaviour of this inside withTransaction
+    * Method required due to wrong meaning of `this` inside withTransaction
     **/
     private static void deleteQueries(NestedsetTrait node){
         String cname = this.simpleName
@@ -310,24 +332,35 @@ trait NestedsetTrait {
     * Moves the node and its descendants as child of the given parent node
     **/
     static void moveNode(NestedsetTrait node, NestedsetTrait parent) {
-        
+        assert parent != null
+
         if (isNodeDirty(node)) {
             throw new NestedsetException("nestedset node properties cannot be modified manually")
         }
+
         if (isNodeDirty(parent)) {
             throw new NestedsetException("nestedset parent node properties cannot be modified manually")
         }
 
-        String cname = this.simpleName
+        // nestedset properties could be changed by other node movements
+        if (node.isAttached()) {
+            node.refresh()
+        }
+
+        parent.refresh()
+        
+        if (parent.isDescendant(node)) {
+            throw new NestedsetException("node cannot be moved to one of its descendants")
+        }
+        if (node.id == parent.id || node.parent && node.parent.id == parent.id) {
+            return null
+        }
+
+        def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
+        String lastUpdatedQuery = hasLastUpdated ? ', lastUpdated = ?' : ''
+        def params = hasLastUpdated ? [new Date()] : []
 
         this.withTransaction { status ->
-            if (parent.isDescendant(node)) {
-                throw new NestedsetException("node cannot be moved to one of its descendants")
-            }
-            if (node.id == parent.id || node.parent && node.parent.id == parent.id) {
-                return null
-            }
-
             lockTree()
 
             node.parent = parent
@@ -341,34 +374,43 @@ trait NestedsetTrait {
                 node.lft += gap
                 node.rgt += gap
             }
+
             def nodeLeft = node.lft
             def nodeRight = node.rgt
-
-            def depthDiff = parent.depth - node.depth + 1
-            def jump = parent.lft - node.lft + 1
             
-            def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
-            String lastUpdatedQuery = hasLastUpdated ? ', lastUpdated = ?' : ''
-            def params = hasLastUpdated ? [new Date()] : []
-
-            // move the tree to the hole
-            def sqlMove = """
-                UPDATE ${cname}
-                SET lft = lft + ${jump} ,
-                    rgt = rgt + ${jump} ,
-                    depth = depth + ${depthDiff}${lastUpdatedQuery}
-                WHERE lft BETWEEN ${nodeLeft} AND ${nodeRight}
-            """
-
-            this.executeUpdate(sqlMove, params)
-
+            moveQueries(node, parent, lastUpdatedQuery, params)
             closeGap(nodeLeft, nodeRight, lastUpdatedQuery, params)
 
             unlockTree()
         }
+
+        node.refresh()
+        parent.refresh()
+        //node.cleanUpGorm()
     }
 
-    private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery, Map params) {
+    /**
+    * Method required due to wrong meaning of `this` inside withTransaction
+    **/
+    private static void moveQueries(NestedsetTrait node, NestedsetTrait parent, String lastUpdatedQuery, List params) {
+
+        def depthDiff = parent.depth - node.depth + 1
+        def jump = parent.lft - node.lft + 1
+
+        String cname = this.simpleName
+        // move the tree to the hole
+        def sqlMove = """
+            UPDATE ${cname}
+            SET lft = lft + ${jump} ,
+                rgt = rgt + ${jump} ,
+                depth = depth + ${depthDiff}${lastUpdatedQuery}
+            WHERE lft BETWEEN ${node.lft} AND ${node.rgt}
+        """
+
+        this.executeUpdate(sqlMove, params)
+    }
+
+    private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery, List params) {
         String cname = this.simpleName
         def gapsize = rgt - lft + 1
         
@@ -379,6 +421,4 @@ trait NestedsetTrait {
         this.executeUpdate(sql_lft, params)
         this.executeUpdate(sql_rgt, params)
     }
-
-
 }

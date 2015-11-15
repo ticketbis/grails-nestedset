@@ -16,21 +16,14 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
         Category.addNode(category)
         Category.addNode(category2, parent)
         Category.addNode(category3, category2)
-        
         parent.refresh()
+        
     }
 
     def cleanupSpec() {
-        //TODO AKIIIIIIIIIII el parent no refresca su rgt
-        println "PAR: ${parent.lft} - ${parent.rgt}"
-        println "CAT3: ${category2.lft} - ${category2.rgt}"
         Category.deleteNode(category3)
-        println "PAR: ${parent.lft} - ${parent.rgt}"
-        println "CAT3: ${category2.lft} - ${category2.rgt}"
         Category.deleteNode(category2)
-        println "PAR: ${parent.lft} - ${parent.rgt}"
         Category.deleteNode(category)
-        println "PAR: ${parent.lft} - ${parent.rgt}"
         Category.deleteNode(parent)
     }
 
