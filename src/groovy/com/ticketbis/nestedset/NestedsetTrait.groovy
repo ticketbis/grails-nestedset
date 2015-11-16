@@ -19,10 +19,9 @@ trait NestedsetTrait {
     Boolean isRootNode() {
         return this.parent == null
     }
-
     
     /**
-    * Gets its descendants, that is a subtree being the root
+    * Gets its descendants. A subtree with the node as root.
     **/
     List getTree(boolean exclude_itself=false) {
         if (this.isLeaf()) {
@@ -121,12 +120,10 @@ trait NestedsetTrait {
         return this.class.findByParentIsNullAndLftLessThanAndRgtGreaterThan(this.lft, this.lft)
     }
 
-    Boolean isDescendant(node) {
+    Boolean isDescendant(NestedsetTrait node) {
         return this.lft > node.lft && this.lft < node.rgt
     }
 
-    //def sessionFactory
-    //def propertyInstanceMap = org.codehaus.groovy.grails.plugins.DomainClassGrailsPlugin.PROPERTY_INSTANCE_MAP
     //def cleanUpGorm() {
     //    def session = sessionFactory.currentSession
     //    session.flush()
