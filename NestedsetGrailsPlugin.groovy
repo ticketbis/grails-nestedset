@@ -43,17 +43,6 @@ provides nestedset behaviour to domain classes.
     def doWithApplicationContext = { applicationContext ->
     }
 
-    def addEventTypeListener(listeners, listener, type) {
-        def typeProperty = "${type}EventListeners"
-        def typeListeners = listeners."${typeProperty}"
-
-        def expandedTypeListeners = new Object[typeListeners.length + 1]
-        System.arraycopy(typeListeners, 0, expandedTypeListeners, 0, typeListeners.length)
-        expandedTypeListeners[-1] = listener
-
-        listeners."${typeProperty}" = expandedTypeListeners
-    }
-
     def onChange = { event ->
     }
 
