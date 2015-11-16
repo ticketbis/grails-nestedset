@@ -18,7 +18,7 @@ compile "com.ticketbis:nestedset:0.1.0"
 The following example shows how to add nestedset behaviour to a domain class:
 
 ```groovy
-// grails-app/domain
+// grails-app/domain/Category.groovy
 import com.ticketbis.nestedset.ast.Nestedset
 
 @Nestedset
@@ -34,6 +34,8 @@ Integer rgt // Nestedset right value
 Integer depth // Node depth inside the tree
 Category parent // Parent node
 ```
+Changing lft, rgt and depth values manually will corrupt the tree. Please, DO NOT change them manually, use addNode, deleteNode and moveNode instead.
+
 
 Methods added to domain class are listed below:
 ```groovy
@@ -50,7 +52,7 @@ Category getRoot() // Its root node
 Boolean isDescendant(Category node) 
 ```
 
-Three static methods added to domain classes:
+Three static methods are available to alter the tree:
 ```groovy
 // Adding nodes to the tree
 Category.addNode(Category node, Category parent)
@@ -60,9 +62,6 @@ Category.deleteNode(Category node)
 // Moving one node (changing its parent)
 Category.moveNode(Category node, Category newParent)
 ```
-
-#### Customizing fallbacks
-
 
 #### Known issues
 addNode, deleteNode and moveNode methods may change lft, rgt and depth values of other nodes, so it is recommended to refresh them within the same session when you need access to one of these properties on other nodes.
