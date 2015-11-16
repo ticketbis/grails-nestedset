@@ -128,6 +128,10 @@ trait NestedsetTrait {
     * Static methods
     **/
 
+	static def getRoots(params=[:]) {
+		return this.findAllByParentIsNull(params)
+	}
+
     /**
     * Since modifying the tree needs to be thread-safe, we need to lock the table
     * during any manipulation proccess. We use negative depth for root nodes to indicate

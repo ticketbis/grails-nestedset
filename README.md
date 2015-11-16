@@ -63,6 +63,10 @@ Category.deleteNode(Category node)
 Category.moveNode(Category node, Category newParent)
 ```
 
+```groovy
+Category.roots // list of all roots
+```
+
 #### Known issues
 addNode, deleteNode and moveNode methods may change lft, rgt and depth values of other nodes, so it is recommended to refresh them within the same session when you need access to one of these properties on other nodes.
 

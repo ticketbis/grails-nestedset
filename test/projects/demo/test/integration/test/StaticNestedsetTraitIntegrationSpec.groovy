@@ -30,6 +30,11 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
         Category.deleteNode(parent2)
     }
 
+    void "test roots"() {
+        expect:
+            Category.roots.size() == 2
+    }
+
     void "test addNode"() {
         expect:
             parent.lft == 1
