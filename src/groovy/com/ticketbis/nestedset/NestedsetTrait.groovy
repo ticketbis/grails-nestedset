@@ -124,14 +124,6 @@ trait NestedsetTrait {
         return this.lft > node.lft && this.lft < node.rgt
     }
 
-    //def cleanUpGorm() {
-    //    def session = sessionFactory.currentSession
-    //    session.flush()
-    //    session.clear()
-    //    propertyInstanceMap.get().clear()
-    //}
-
-
     /** 
     * Static methods
     **/
@@ -223,8 +215,6 @@ trait NestedsetTrait {
         }
         
         parent?.refresh()
-        
-        //node.cleanUpGorm()
     }
 
     private static Long maxRightValue() {
@@ -289,8 +279,6 @@ trait NestedsetTrait {
             deleteQueries(node)
             unlockTree()
         }
-
-        //node.cleanUpGorm()
     }
 
     /**
@@ -383,7 +371,6 @@ trait NestedsetTrait {
 
         node.refresh()
         parent.refresh()
-        //node.cleanUpGorm()
     }
 
     /**
