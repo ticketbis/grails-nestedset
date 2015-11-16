@@ -65,3 +65,16 @@ Category.moveNode(Category node, Category newParent)
 
 
 #### Known issues
+addNode, deleteNode and moveNode methods may change lft, rgt and depth values of other nodes, so it is recommended to refresh them within the same session when you need access to one of these properties on other nodes.
+
+The following example shows how parent properties are not updated:
+```groovy
+Category.addNode(parent)
+Category.addNode(category, parent)
+Category.addNode(category2, parent)
+Category.addNode(category3, category2)
+
+assert parent.rgt == 6 // Wrong value. parent.rgt value wasn't updated after Category.addNode(category3, category2)
+parent.refresh()
+assert parent.rgt == 8 // Right value.
+```

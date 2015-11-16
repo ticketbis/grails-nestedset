@@ -17,7 +17,6 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
         Category.addNode(category2, parent)
         Category.addNode(category3, category2)
         parent.refresh()
-        
     }
 
     def cleanupSpec() {
