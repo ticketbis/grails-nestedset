@@ -1,5 +1,3 @@
-//import com.ticketbis.nestedset.NestedsetHibernateListener
-
 class NestedsetGrailsPlugin {
     // the plugin version
     def version = "0.1"
@@ -43,13 +41,6 @@ provides nestedset behaviour to domain classes.
     }
 
     def doWithApplicationContext = { applicationContext ->
-        //def listeners = applicationContext.sessionFactory.eventListeners
-        //def listener = new NestedsetHibernateListener()
-        //
-        //['preInsert', 'postInsert', 'flushEntity', 'persist'].each({
-        //   addEventTypeListener(listeners, listener, it)
-        //})
-
     }
 
     def addEventTypeListener(listeners, listener, type) {
