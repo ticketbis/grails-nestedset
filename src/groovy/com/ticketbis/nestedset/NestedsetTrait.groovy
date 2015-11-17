@@ -409,4 +409,8 @@ trait NestedsetTrait {
         this.executeUpdate(sql_lft, params)
         this.executeUpdate(sql_rgt, params)
     }
+
+    void fixLftRgt() {
+        // To be implemented
+    }
 }

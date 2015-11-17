@@ -45,6 +45,7 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
         addProperties(targetClassNode)
         addNestedsetTrait(targetClassNode, sourceUnit)
         addConstraints(targetClassNode)
+        addbeforeInsertHook(targetClassNode)
     }
 
     private void addProperties(ClassNode classNode) {
@@ -88,6 +89,31 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
             'parent', 
             'nullable: true'
         )
+    }
+
+    private void addbeforeInsertHook(ClassNode classNode) {
+        MethodNode methodNode = classNode.getMethod("beforeInsert", Parameter.EMPTY_ARRAY)
+        if (!methodNode) {
+            methodNode = classNode.addMethod("beforeInsert",
+                    Modifier.PUBLIC,
+                    ClassHelper.OBJECT_TYPE,
+                    Parameter.EMPTY_ARRAY,
+                    null,
+                    new BlockStatement());
+        }
+
+        BlockStatement statement = new BlockStatement([
+              new ExpressionStatement(
+                  new MethodCallExpression(
+                      VariableExpression.THIS_EXPRESSION,
+                      'fixLftRgt',
+                      MethodCallExpression.NO_ARGUMENTS
+                  )
+              )
+          ] as Statement[],
+          new VariableScope())
+
+        methodNode.code.addStatement(statement)
     }
 }
 
