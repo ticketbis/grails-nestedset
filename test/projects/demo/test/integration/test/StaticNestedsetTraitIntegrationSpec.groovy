@@ -12,11 +12,11 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
     @Shared category = new Category(name: "Leven 1A", parent: parent)
     @Shared category2 = new Category(name: "Level 1B")
     @Shared category3 = new Category(name: "Level 2B")
-    
+
     def setupSpec() {
         Category.addNode(parent)
         Category.addNode(category)
-        
+
         Category.addNode(parent2)
         Category.addNode(category2, parent2)
         Category.addNode(category3, parent2)
@@ -65,6 +65,25 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
     void "test moveNode exception when moving to its children"() {
         when:
             Category.moveNode(parent2, category2)
+        then:
+            thrown NestedsetException
+    }
+
+    void "test save method protected for inserts"() {
+        when:
+            Category badCategory = new Category(name: "Bad category")
+            badCategory.save(flush: true)
+        then:
+            thrown NestedsetException
+    }
+
+    void "test save method protected for updates"() {
+        when:
+            category.refresh()
+            category.lft = 18
+            println "before save ${category.__nestedsetMutable}"
+            category.save(flush:true)
+            println "after save ${category.__nestedsetMutable}"
         then:
             thrown NestedsetException
     }

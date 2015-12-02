@@ -10,7 +10,7 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
     @Shared category = new Category(name: "Leven 1A", parent: parent)
     @Shared category2 = new Category(name: "Level 1B")
     @Shared category3 = new Category(name: "Level 2B")
-    
+
     def setupSpec() {
         Category.addNode(parent)
         Category.addNode(category)
@@ -47,7 +47,7 @@ class NestedsetTraitIntegrationSpec extends IntegrationSpec {
             parent.descendants[0].id == category.id
             parent.descendants[1].id == category2.id
             parent.descendants[2].id == category3.id
-            
+
             parent.countDescendants() == 3
 
             category.countDescendants() == 0

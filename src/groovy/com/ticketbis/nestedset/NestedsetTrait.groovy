@@ -19,7 +19,7 @@ trait NestedsetTrait {
     Boolean isRootNode() {
         return this.parent == null
     }
-    
+
     /**
     * Gets its descendants. A subtree with the node as root.
     **/
@@ -54,7 +54,7 @@ trait NestedsetTrait {
     }
 
     /**
-    * Gets descendants without children (Leafs nodes) 
+    * Gets descendants without children (Leafs nodes)
     **/
     List getLeafs() {
         if (this.isLeaf()) {
@@ -69,7 +69,7 @@ trait NestedsetTrait {
             AND node.rgt = node.lft + 1
             ORDER BY node.lft
         """
-        
+
         return this.class.executeQuery(query, [this.id])
     }
 
@@ -124,7 +124,7 @@ trait NestedsetTrait {
         return this.lft > node.lft && this.lft < node.rgt
     }
 
-    /** 
+    /**
     * Static methods
     **/
 
@@ -179,9 +179,9 @@ trait NestedsetTrait {
             throw new NestedsetException("parent node must be added to the tree first. Use addNode first")
         }
 
+        node.__nestedsetMutable = true
         this.withTransaction { status ->
             lockTree()
-
             node.save()
 
             if (parent) {
@@ -217,7 +217,8 @@ trait NestedsetTrait {
 
             unlockTree()
         }
-        
+        node.__nestedsetMutable = false
+
         parent?.refresh()
     }
 
@@ -295,7 +296,7 @@ trait NestedsetTrait {
 
         def width = node.rgt - node.lft + 1
         def query_del = """
-            delete from ${cname} node where node.lft between ? and ? 
+            delete from ${cname} node where node.lft between ? and ?
             order by node.depth desc
         """
         def query_rgt = """
@@ -337,7 +338,7 @@ trait NestedsetTrait {
         }
 
         parent.refresh()
-        
+
         if (parent.isDescendant(node)) {
             throw new NestedsetException("node cannot be moved to one of its descendants")
         }
@@ -349,12 +350,13 @@ trait NestedsetTrait {
         String lastUpdatedQuery = hasLastUpdated ? ', lastUpdated = ?' : ''
         def params = hasLastUpdated ? [new Date()] : []
 
+        node.__nestedsetMutable = true
         this.withTransaction { status ->
             lockTree()
 
             node.parent = parent
             node.save(flush: true)
-            
+
             // make the hole
             def gap = node.rgt - node.lft + 1
             move_right(parent.lft, gap)
@@ -366,12 +368,13 @@ trait NestedsetTrait {
 
             def nodeLeft = node.lft
             def nodeRight = node.rgt
-            
+
             moveQueries(node, parent, lastUpdatedQuery, params)
             closeGap(nodeLeft, nodeRight, lastUpdatedQuery, params)
 
             unlockTree()
         }
+        node.__nestedsetMutable = false
 
         node.refresh()
         parent.refresh()
@@ -401,16 +404,26 @@ trait NestedsetTrait {
     private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery, List params) {
         String cname = this.simpleName
         def gapsize = rgt - lft + 1
-        
+
         def sql_lft = "UPDATE ${cname} SET lft = lft - ${gapsize}${lastUpdatedQuery} WHERE lft > ${lft}"
         def sql_rgt = "UPDATE ${cname} SET rgt = rgt - ${gapsize}${lastUpdatedQuery} WHERE rgt > ${lft}"
-        
+
         def now = new Date()
         this.executeUpdate(sql_lft, params)
         this.executeUpdate(sql_rgt, params)
     }
 
-    void fixLftRgt() {
-        // To be implemented
+    void b4Insert() {
+        if (!this.__nestedsetMutable) {
+            throw new NestedsetException("New nodes must be added by using static method addNode")
+        }
+    }
+
+    void b4Update() {
+        if (!this.__nestedsetMutable) {
+            if (this.isDirty('lft') || this.isDirty('rgt') || this.isDirty('depth')) {
+                throw new NestedsetException("Nestedset properties (lft, rgt and depth) cannot be altered manually")
+            }
+        }
     }
 }

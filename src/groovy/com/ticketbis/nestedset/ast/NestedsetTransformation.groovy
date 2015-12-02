@@ -46,6 +46,7 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
         addNestedsetTrait(targetClassNode, sourceUnit)
         addConstraints(targetClassNode)
         addbeforeInsertHook(targetClassNode)
+        addbeforeUpdateHook(targetClassNode)
     }
 
     private void addProperties(ClassNode classNode) {
@@ -69,6 +70,15 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
             Modifier.PUBLIC,
             classNodeLabel
         )
+
+        // transient property to avoid manual nestedset properties manipulation
+        NestedsetASTUtils.getOrCreateProperty(
+            classNode,
+            '__nestedsetMutable',
+            new ConstantExpression(false),
+            Modifier.PUBLIC,
+              ClassHelper.Boolean_TYPE)
+        NestedsetASTUtils.addTransient(classNode, '__nestedsetMutable')
     }
 
     private void addNestedsetTrait(ClassNode classNode, SourceUnit sourceUnit) {
@@ -77,16 +87,13 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
 
         classNode.addInterface(NESTEDSET_NODE)
         TraitComposer.doExtendTraits(classNode, sourceUnit, compilationUnit)
-
-        //NestedsetASTUtils.addTransient(classNode, 'translationsMapCache')
-        //NestedsetASTUtils.addTransient(classNode, 'translationByLocale')
     }
 
     private void addConstraints(ClassNode classNode) {
         NestedsetASTUtils.addSettings(
-            'constraints', 
-            classNode, 
-            'parent', 
+            'constraints',
+            classNode,
+            'parent',
             'nullable: true'
         )
     }
@@ -106,7 +113,32 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
               new ExpressionStatement(
                   new MethodCallExpression(
                       VariableExpression.THIS_EXPRESSION,
-                      'fixLftRgt',
+                      'b4Insert',
+                      MethodCallExpression.NO_ARGUMENTS
+                  )
+              )
+          ] as Statement[],
+          new VariableScope())
+
+        methodNode.code.addStatement(statement)
+    }
+
+    private void addbeforeUpdateHook(ClassNode classNode) {
+        MethodNode methodNode = classNode.getMethod("beforeUpdate", Parameter.EMPTY_ARRAY)
+        if (!methodNode) {
+            methodNode = classNode.addMethod("beforeUpdate",
+                    Modifier.PUBLIC,
+                    ClassHelper.OBJECT_TYPE,
+                    Parameter.EMPTY_ARRAY,
+                    null,
+                    new BlockStatement());
+        }
+
+        BlockStatement statement = new BlockStatement([
+              new ExpressionStatement(
+                  new MethodCallExpression(
+                      VariableExpression.THIS_EXPRESSION,
+                      'b4Update',
                       MethodCallExpression.NO_ARGUMENTS
                   )
               )
