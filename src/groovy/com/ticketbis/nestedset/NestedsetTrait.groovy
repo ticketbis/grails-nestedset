@@ -250,12 +250,19 @@ trait NestedsetTrait {
         String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
         def params = hasLastUpdated ? [new Date(), rgt] : [rgt]
 
+        def versioned = this.getDeclaredField('version') != null
+        String versionQuery = versioned ? ', node.version = node.version + 1' : ''
+
         def query_rgt = """
-            update ${cname} node set node.rgt = node.rgt + ${delta}${lastUpdatedQuery}
+            update ${cname} node set node.rgt = node.rgt + ${delta}
+            ${lastUpdatedQuery}
+            ${versionQuery}
             where node.rgt > ?
         """
         def query_lft = """
-            update ${cname} node set node.lft = node.lft + ${delta}${lastUpdatedQuery}
+            update ${cname} node set node.lft = node.lft + ${delta}
+            ${lastUpdatedQuery}
+            ${versionQuery}
             where node.lft > ?
         """
         this.executeUpdate(query_rgt, params)
@@ -294,17 +301,24 @@ trait NestedsetTrait {
         def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
         String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
 
+        def versioned = this.getDeclaredField('version') != null
+        String versionQuery = versioned ? ', node.version = node.version + 1' : ''
+
         def width = node.rgt - node.lft + 1
         def query_del = """
             delete from ${cname} node where node.lft between ? and ?
             order by node.depth desc
         """
         def query_rgt = """
-            update ${cname} node set node.rgt = node.rgt - ${width}${lastUpdatedQuery}
+            update ${cname} node set node.rgt = node.rgt - ${width}
+            ${lastUpdatedQuery}
+            ${versionQuery}
             where node.rgt > ?
         """
         def query_lft = """
-            update ${cname} node set node.lft = node.lft - ${width}${lastUpdatedQuery}
+            update ${cname} node set node.lft = node.lft - ${width}
+            ${lastUpdatedQuery}
+            ${versionQuery}
             where node.lft > ?
         """
 
@@ -350,6 +364,9 @@ trait NestedsetTrait {
         String lastUpdatedQuery = hasLastUpdated ? ', lastUpdated = ?' : ''
         def params = hasLastUpdated ? [new Date()] : []
 
+        def versioned = this.getDeclaredField('version') != null
+        String versionQuery = versioned ? ', version = version + 1' : ''
+
         node.__nestedsetMutable = true
         this.withTransaction { status ->
             lockTree()
@@ -369,8 +386,8 @@ trait NestedsetTrait {
             def nodeLeft = node.lft
             def nodeRight = node.rgt
 
-            moveQueries(node, parent, lastUpdatedQuery, params)
-            closeGap(nodeLeft, nodeRight, lastUpdatedQuery, params)
+            moveQueries(node, parent, lastUpdatedQuery, versionQuery, params)
+            closeGap(nodeLeft, nodeRight, lastUpdatedQuery, versionQuery, params)
 
             unlockTree()
         }
@@ -383,7 +400,8 @@ trait NestedsetTrait {
     /**
     * Method required due to wrong meaning of `this` inside withTransaction
     **/
-    private static void moveQueries(NestedsetTrait node, NestedsetTrait parent, String lastUpdatedQuery, List params) {
+    private static void moveQueries(NestedsetTrait node, NestedsetTrait parent,
+        String lastUpdatedQuery, String versionQuery, List params) {
 
         def depthDiff = parent.depth - node.depth + 1
         def jump = parent.lft - node.lft + 1
@@ -394,19 +412,23 @@ trait NestedsetTrait {
             UPDATE ${cname}
             SET lft = lft + ${jump} ,
                 rgt = rgt + ${jump} ,
-                depth = depth + ${depthDiff}${lastUpdatedQuery}
+                depth = depth + ${depthDiff}
+                ${lastUpdatedQuery}
+                ${versionQuery}
             WHERE lft BETWEEN ${node.lft} AND ${node.rgt}
         """
 
         this.executeUpdate(sqlMove, params)
     }
 
-    private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery, List params) {
+    private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery,
+        String versionQuery, List params) {
+
         String cname = this.simpleName
         def gapsize = rgt - lft + 1
 
-        def sql_lft = "UPDATE ${cname} SET lft = lft - ${gapsize}${lastUpdatedQuery} WHERE lft > ${lft}"
-        def sql_rgt = "UPDATE ${cname} SET rgt = rgt - ${gapsize}${lastUpdatedQuery} WHERE rgt > ${lft}"
+        def sql_lft = "UPDATE ${cname} SET lft = lft - ${gapsize}${lastUpdatedQuery}${versionQuery} WHERE lft > ${lft}"
+        def sql_rgt = "UPDATE ${cname} SET rgt = rgt - ${gapsize}${lastUpdatedQuery}${versionQuery} WHERE rgt > ${lft}"
 
         def now = new Date()
         this.executeUpdate(sql_lft, params)
