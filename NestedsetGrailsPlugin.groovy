@@ -1,6 +1,6 @@
 class NestedsetGrailsPlugin {
     // the plugin version
-    def version = "0.1.1"
+    def version = "0.2.0"
     def groupId = "com.ticketbis"
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.4 > *"
@@ -9,7 +9,6 @@ class NestedsetGrailsPlugin {
         "grails-app/views/error.gsp"
     ]
 
-    // TODO Fill in these fields
     def title = "Nestedset Plugin"
     def author = "Jose Gargallo"
     def authorEmail = ""
