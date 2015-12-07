@@ -1,6 +1,6 @@
 class NestedsetGrailsPlugin {
     // the plugin version
-    def version = "0.2.0"
+    def version = "0.2.2"
     def groupId = "com.ticketbis"
     // the version or versions of Grails the plugin is designed for
     def grailsVersion = "2.4 > *"

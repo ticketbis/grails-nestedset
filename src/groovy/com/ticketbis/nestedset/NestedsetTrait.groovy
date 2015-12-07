@@ -179,7 +179,7 @@ trait NestedsetTrait {
             throw new NestedsetException("parent node must be added to the tree first. Use addNode first")
         }
 
-        node.__nestedsetMutable = true
+        node.nestedsetMutable = true
         this.withTransaction { status ->
             lockTree()
             node.save()
@@ -217,7 +217,7 @@ trait NestedsetTrait {
 
             unlockTree()
         }
-        node.__nestedsetMutable = false
+        node.nestedsetMutable = false
 
         parent?.refresh()
     }
@@ -367,7 +367,7 @@ trait NestedsetTrait {
         def versioned = this.getDeclaredField('version') != null
         String versionQuery = versioned ? ', version = version + 1' : ''
 
-        node.__nestedsetMutable = true
+        node.nestedsetMutable = true
         this.withTransaction { status ->
             lockTree()
 
@@ -391,7 +391,7 @@ trait NestedsetTrait {
 
             unlockTree()
         }
-        node.__nestedsetMutable = false
+        node.nestedsetMutable = false
 
         node.refresh()
         parent.refresh()
@@ -436,13 +436,13 @@ trait NestedsetTrait {
     }
 
     void b4Insert() {
-        if (!this.__nestedsetMutable) {
+        if (!this.nestedsetMutable) {
             throw new NestedsetException("New nodes must be added by using static method addNode")
         }
     }
 
     void b4Update() {
-        if (!this.__nestedsetMutable) {
+        if (!this.nestedsetMutable) {
             if (this.isDirty('lft') || this.isDirty('rgt') || this.isDirty('depth')) {
                 throw new NestedsetException("Nestedset properties (lft, rgt and depth) cannot be altered manually")
             }

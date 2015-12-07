@@ -48,6 +48,12 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
             category3.lft == 8
             category3.rgt == 9
             parent2.rgt == 10
+
+            parent.depth == 1
+            category.depth == 2
+            parent2.depth == 1
+            category2.depth == 2
+            category3.depth == 2
     }
 
     void "test moveNode"() {
@@ -81,9 +87,7 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
         when:
             category.refresh()
             category.lft = 18
-            println "before save ${category.__nestedsetMutable}"
             category.save(flush:true)
-            println "after save ${category.__nestedsetMutable}"
         then:
             thrown NestedsetException
     }

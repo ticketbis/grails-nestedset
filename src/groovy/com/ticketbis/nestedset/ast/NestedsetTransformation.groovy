@@ -74,11 +74,11 @@ class NestedsetTransformation implements ASTTransformation, CompilationUnitAware
         // transient property to avoid manual nestedset properties manipulation
         NestedsetASTUtils.getOrCreateProperty(
             classNode,
-            '__nestedsetMutable',
+            'nestedsetMutable',
             new ConstantExpression(false),
             Modifier.PUBLIC,
               ClassHelper.Boolean_TYPE)
-        NestedsetASTUtils.addTransient(classNode, '__nestedsetMutable')
+        NestedsetASTUtils.addTransient(classNode, 'nestedsetMutable')
     }
 
     private void addNestedsetTrait(ClassNode classNode, SourceUnit sourceUnit) {
