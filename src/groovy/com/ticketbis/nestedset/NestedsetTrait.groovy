@@ -243,7 +243,7 @@ trait NestedsetTrait {
 
     }
 
-    private static void move_right(rgt, delta) {
+    private static void move_right(rgt, delta, updateVersion=true) {
         String cname = this.simpleName
 
         def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
@@ -251,7 +251,7 @@ trait NestedsetTrait {
         def params = hasLastUpdated ? [new Date(), rgt] : [rgt]
 
         def versioned = this.getDeclaredField('version') != null
-        String versionQuery = versioned ? ', node.version = node.version + 1' : ''
+        String versionQuery = updateVersion && versioned ? ', node.version = node.version + 1' : ''
 
         def query_rgt = """
             update ${cname} node set node.rgt = node.rgt + ${delta}
@@ -336,13 +336,11 @@ trait NestedsetTrait {
     * Moves the node and its descendants as child of the given parent node
     **/
     static void moveNode(NestedsetTrait node, NestedsetTrait parent) {
-        assert parent != null
-
         if (isNodeDirty(node)) {
             throw new NestedsetException("nestedset node properties cannot be modified manually")
         }
 
-        if (isNodeDirty(parent)) {
+        if (parent && isNodeDirty(parent)) {
             throw new NestedsetException("nestedset parent node properties cannot be modified manually")
         }
 
@@ -351,12 +349,15 @@ trait NestedsetTrait {
             node.refresh()
         }
 
-        parent.refresh()
+        if (parent) {
+            parent.refresh()
+        }
 
-        if (parent.isDescendant(node)) {
+        if (parent?.isDescendant(node)) {
             throw new NestedsetException("node cannot be moved to one of its descendants")
         }
-        if (node.id == parent.id || node.parent && node.parent.id == parent.id) {
+
+        if (node.id == parent?.id || node.parent?.id == parent?.id) {
             return null
         }
 
@@ -373,38 +374,49 @@ trait NestedsetTrait {
 
             node.parent = parent
 
-            // make the hole
-            def gap = node.rgt - node.lft + 1
-            move_right(parent.lft, gap)
+            if (parent) {
+                // make the hole
+                def gap = node.rgt - node.lft + 1
+                move_right(parent.lft, gap, false)
 
-            if (parent.lft < node.lft) {
-                node.lft += gap
-                node.rgt += gap
+                if (parent.lft < node.lft) {
+                    node.lft += gap
+                    node.rgt += gap
+                }
             }
 
             def nodeLeft = node.lft
             def nodeRight = node.rgt
 
             node.save(flush: true)
-            moveQueries(node, parent, lastUpdatedQuery, versionQuery, params)
+
+            def newParentDepth = parent ? parent.depth : 0
+            def newParentLft = parent ? parent.lft : maxRightValue()
+            moveQueries(node, newParentDepth, newParentLft, lastUpdatedQuery, versionQuery, params)
+
             closeGap(nodeLeft, nodeRight, lastUpdatedQuery, versionQuery, params)
+
+            if (!parent) {
+                // forces new root node to depth -1 before unlocked
+                forceRootDepth(node)
+            }
 
             unlockTree()
         }
         node.nestedsetMutable = false
 
         node.refresh()
-        parent.refresh()
+        parent?.refresh()
     }
 
     /**
     * Method required due to wrong meaning of `this` inside withTransaction
     **/
-    private static void moveQueries(NestedsetTrait node, NestedsetTrait parent,
-        String lastUpdatedQuery, String versionQuery, List params) {
+    private static void moveQueries(NestedsetTrait node, def parentDepth,
+        def parentLft, String lastUpdatedQuery, String versionQuery, List params) {
 
-        def depthDiff = parent.depth - node.depth + 1
-        def jump = parent.lft - node.lft + 1
+        def depthDiff = parentDepth - node.depth + 1
+        def jump = parentLft - node.lft + 1
 
         String cname = this.simpleName
         // move the tree to the hole
@@ -419,6 +431,11 @@ trait NestedsetTrait {
         """
 
         this.executeUpdate(sqlMove, params)
+    }
+
+    private static void forceRootDepth(NestedsetTrait node) {
+        String cname = this.simpleName
+        this.executeUpdate("UPDATE ${cname} SET depth = -1 WHERE id = ${node.id}")
     }
 
     private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery,
