@@ -372,7 +372,6 @@ trait NestedsetTrait {
             lockTree()
 
             node.parent = parent
-            node.save(flush: true)
 
             // make the hole
             def gap = node.rgt - node.lft + 1
@@ -386,6 +385,7 @@ trait NestedsetTrait {
             def nodeLeft = node.lft
             def nodeRight = node.rgt
 
+            node.save(flush: true)
             moveQueries(node, parent, lastUpdatedQuery, versionQuery, params)
             closeGap(nodeLeft, nodeRight, lastUpdatedQuery, versionQuery, params)
 

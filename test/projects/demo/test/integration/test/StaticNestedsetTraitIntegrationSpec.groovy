@@ -68,6 +68,21 @@ class StaticNestedsetTraitIntegrationSpec extends IntegrationSpec {
             parent.rgt == 2
     }
 
+    void "test moveNode backwards"() {
+        given:
+            category.refresh()
+            Category.moveNode(category, parent)
+            parent2.refresh()
+        expect:
+            parent.lft == 1
+            category.lft == 2
+            category.rgt == 3
+            parent.rgt == 4
+
+            parent2.lft == 5
+            parent2.rgt == 10
+    }
+
     void "test moveNode exception when moving to its children"() {
         when:
             Category.moveNode(parent2, category2)

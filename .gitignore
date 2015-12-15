@@ -39,3 +39,4 @@
 
 #project specific files
 test/projects/demo/target
+*.tld
