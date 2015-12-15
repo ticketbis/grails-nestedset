@@ -83,8 +83,8 @@ assert parent.rgt == 8 // Right value.
 ```
 
 ##### Unit tests
-Nestedset plugin protects lft, rft and depth properties from manual modification. Since executeUpdates are not supported for unit testing, addNode doesn't work so in order to bypass nestedset protection
-so you can do the following:
+Nestedset plugin protects lft, rft and depth properties from manual modification. Since executeUpdates are not supported for unit testing, addNode doesn't work, so in order to bypass nestedset protection
+you can do the following:
 ```groovy
 Category category = new Categoria(name: 'Category 1')
 category.nestedsetMutable = true
