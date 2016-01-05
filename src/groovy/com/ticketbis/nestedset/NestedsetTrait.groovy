@@ -187,7 +187,7 @@ trait NestedsetTrait {
             if (parent) {
                 def lastRight
                 if (parent.isLeaf()) {
-                    node.depth = parent.depth + 1
+                    node.depth = parent.isRootNode() ? 2 : parent.depth + 1
                     node.lft = parent.lft + 1
                     node.rgt = parent.lft + 2
                     node.parent = parent
