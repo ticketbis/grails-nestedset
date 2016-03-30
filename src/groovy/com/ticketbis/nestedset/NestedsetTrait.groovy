@@ -216,6 +216,8 @@ trait NestedsetTrait {
             }
 
             unlockTree()
+
+            afterTreeChanged()
         }
         node.nestedsetMutable = false
 
@@ -290,6 +292,8 @@ trait NestedsetTrait {
             lockTree()
             deleteQueries(node)
             unlockTree()
+
+            afterTreeChanged()
         }
     }
 
@@ -402,6 +406,8 @@ trait NestedsetTrait {
             }
 
             unlockTree()
+
+            afterTreeChanged()
         }
         node.nestedsetMutable = false
 
@@ -465,4 +471,6 @@ trait NestedsetTrait {
             }
         }
     }
+
+    static void afterTreeChanged() { /* Do nothing */}
 }
