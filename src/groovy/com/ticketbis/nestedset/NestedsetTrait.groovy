@@ -9,14 +9,14 @@ trait NestedsetTrait {
     /**
     * does not have children
     **/
-    Boolean isLeaf() {
+    boolean isLeaf() {
         return this.rgt == this.lft + 1
     }
 
     /**
     * Root node, does not have parent
     **/
-    Boolean isRootNode() {
+    boolean isRootNode() {
         return this.parent == null
     }
 
@@ -138,7 +138,7 @@ trait NestedsetTrait {
     * a lock.
     * This lock system can be improved for large tables by creating a special lock table.
     **/
-    private static void lockTree() {
+    static void lockTree() {
         String cname = this.simpleName
         def res = this.executeUpdate("update ${cname} set depth = -1 where depth = 1")
         if (res == 0 && this.countByDepth(-1) > 0) {
@@ -146,7 +146,7 @@ trait NestedsetTrait {
         }
     }
 
-    private static void unlockTree() {
+    static void unlockTree() {
         String cname = this.simpleName
         def res = this.executeUpdate("update ${cname} set depth = 1 where depth = -1")
         if (res == 0 && this.countByDepth(1) > 0) {
@@ -224,7 +224,7 @@ trait NestedsetTrait {
         parent?.refresh()
     }
 
-    private static Long maxRightValue() {
+    static Long maxRightValue() {
         return this.createCriteria().get {
             projections {
                 max "rgt"
@@ -232,7 +232,7 @@ trait NestedsetTrait {
         } as Long
     }
 
-    private static void addSibling(node, sibling, persist=true) {
+    static void addSibling(node, sibling, persist=true) {
         node.depth = sibling.depth
         node.lft = sibling.rgt + 1
         node.rgt = sibling.rgt + 2
@@ -245,7 +245,7 @@ trait NestedsetTrait {
 
     }
 
-    private static void move_right(rgt, delta, updateVersion=true) {
+    static void move_right(rgt, delta, updateVersion=true) {
         String cname = this.simpleName
 
         def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
@@ -300,7 +300,7 @@ trait NestedsetTrait {
     /**
     * Method required due to wrong meaning of `this` inside withTransaction
     **/
-    private static void deleteQueries(NestedsetTrait node){
+    static void deleteQueries(NestedsetTrait node){
         String cname = this.simpleName
         def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
         String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
@@ -332,7 +332,7 @@ trait NestedsetTrait {
         this.executeUpdate(query_lft, params)
     }
 
-    private static boolean isNodeDirty(NestedsetTrait node) {
+    static boolean isNodeDirty(NestedsetTrait node) {
         return node.isDirty('lft') || node.isDirty('rgt') || node.isDirty('depth')
     }
 
@@ -418,7 +418,7 @@ trait NestedsetTrait {
     /**
     * Method required due to wrong meaning of `this` inside withTransaction
     **/
-    private static void moveQueries(NestedsetTrait node, def parentDepth,
+    static void moveQueries(NestedsetTrait node, def parentDepth,
         def parentLft, String lastUpdatedQuery, String versionQuery, List params) {
 
         def depthDiff = parentDepth - node.depth + 1
@@ -439,12 +439,12 @@ trait NestedsetTrait {
         this.executeUpdate(sqlMove, params)
     }
 
-    private static void forceRootDepth(NestedsetTrait node) {
+    static void forceRootDepth(NestedsetTrait node) {
         String cname = this.simpleName
         this.executeUpdate("UPDATE ${cname} SET depth = -1 WHERE id = ${node.id}")
     }
 
-    private static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery,
+    static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery,
         String versionQuery, List params) {
 
         String cname = this.simpleName
