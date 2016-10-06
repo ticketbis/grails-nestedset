@@ -248,27 +248,21 @@ trait NestedsetTrait {
     static void move_right(rgt, delta, updateVersion=true) {
         String cname = this.simpleName
 
-        def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
-        String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
-        def params = hasLastUpdated ? [new Date(), rgt] : [rgt]
-
         def versioned = this.getDeclaredField('version') != null
         String versionQuery = updateVersion && versioned ? ', node.version = node.version + 1' : ''
 
         def query_rgt = """
             update ${cname} node set node.rgt = node.rgt + ${delta}
-            ${lastUpdatedQuery}
             ${versionQuery}
             where node.rgt > ?
         """
         def query_lft = """
             update ${cname} node set node.lft = node.lft + ${delta}
-            ${lastUpdatedQuery}
             ${versionQuery}
             where node.lft > ?
         """
-        this.executeUpdate(query_rgt, params)
-        this.executeUpdate(query_lft, params)
+        this.executeUpdate(query_rgt, [rgt])
+        this.executeUpdate(query_lft, [rgt])
 
     }
 
@@ -302,8 +296,6 @@ trait NestedsetTrait {
     **/
     static void deleteQueries(NestedsetTrait node){
         String cname = this.simpleName
-        def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
-        String lastUpdatedQuery = hasLastUpdated ? ', node.lastUpdated = ?' : ''
 
         def versioned = this.getDeclaredField('version') != null
         String versionQuery = versioned ? ', node.version = node.version + 1' : ''
@@ -315,21 +307,18 @@ trait NestedsetTrait {
         """
         def query_rgt = """
             update ${cname} node set node.rgt = node.rgt - ${width}
-            ${lastUpdatedQuery}
             ${versionQuery}
             where node.rgt > ?
         """
         def query_lft = """
             update ${cname} node set node.lft = node.lft - ${width}
-            ${lastUpdatedQuery}
             ${versionQuery}
             where node.lft > ?
         """
 
-        def params = hasLastUpdated ? [new Date(), node.rgt] : [node.rgt]
         this.executeUpdate(query_del, [node.lft, node.rgt])
-        this.executeUpdate(query_rgt, params)
-        this.executeUpdate(query_lft, params)
+        this.executeUpdate(query_rgt, [node.rgt])
+        this.executeUpdate(query_lft, [node.rgt])
     }
 
     static boolean isNodeDirty(NestedsetTrait node) {
@@ -362,12 +351,8 @@ trait NestedsetTrait {
         }
 
         if (node.id == parent?.id || node.parent?.id == parent?.id) {
-            return null
+            return
         }
-
-        def hasLastUpdated = this.getDeclaredField('lastUpdated') != null
-        String lastUpdatedQuery = hasLastUpdated ? ', lastUpdated = ?' : ''
-        def params = hasLastUpdated ? [new Date()] : []
 
         def versioned = this.getDeclaredField('version') != null
         String versionQuery = versioned ? ', version = version + 1' : ''
@@ -396,9 +381,12 @@ trait NestedsetTrait {
 
             def newParentDepth = parent ? parent.depth : 0
             def newParentLft = parent ? parent.lft : maxRightValue()
-            moveQueries(node, newParentDepth, newParentLft, lastUpdatedQuery, versionQuery, params)
+            moveQueries(node, newParentDepth, newParentLft, versionQuery)
 
-            closeGap(nodeLeft, nodeRight, lastUpdatedQuery, versionQuery, params)
+            closeGap(nodeLeft, nodeRight, versionQuery)
+
+            node.refresh()
+            touchDescendants(node)
 
             if (!parent) {
                 // forces new root node to depth -1 before unlocked
@@ -415,12 +403,23 @@ trait NestedsetTrait {
         parent?.refresh()
     }
 
+    static void touchDescendants(NestedsetTrait node) {
+        if (this.getDeclaredField('lastUpdated') != null) {
+            String cname = this.simpleName
+            String sqlTouchDescendants = """
+                UPDATE ${cname}
+                SET lastUpdated = current_timestamp
+                WHERE lft > :left AND rgt < :right
+            """
+            def params = [left: node.lft, right: node.rgt]
+            this.executeUpdate(sqlTouchDescendants, params)
+        }
+    }
+
     /**
     * Method required due to wrong meaning of `this` inside withTransaction
     **/
-    static void moveQueries(NestedsetTrait node, def parentDepth,
-        def parentLft, String lastUpdatedQuery, String versionQuery, List params) {
-
+    static void moveQueries(NestedsetTrait node, def parentDepth, def parentLft, String versionQuery) {
         def depthDiff = parentDepth - node.depth + 1
         def jump = parentLft - node.lft + 1
 
@@ -431,12 +430,11 @@ trait NestedsetTrait {
             SET lft = lft + ${jump} ,
                 rgt = rgt + ${jump} ,
                 depth = depth + ${depthDiff}
-                ${lastUpdatedQuery}
                 ${versionQuery}
             WHERE lft BETWEEN ${node.lft} AND ${node.rgt}
         """
 
-        this.executeUpdate(sqlMove, params)
+        this.executeUpdate(sqlMove)
     }
 
     static void forceRootDepth(NestedsetTrait node) {
@@ -444,18 +442,15 @@ trait NestedsetTrait {
         this.executeUpdate("UPDATE ${cname} SET depth = -1 WHERE id = ${node.id}")
     }
 
-    static void closeGap(Integer lft, Integer rgt, String lastUpdatedQuery,
-        String versionQuery, List params) {
-
+    static void closeGap(Integer lft, Integer rgt, String versionQuery) {
         String cname = this.simpleName
         def gapsize = rgt - lft + 1
 
-        def sql_lft = "UPDATE ${cname} SET lft = lft - ${gapsize}${lastUpdatedQuery}${versionQuery} WHERE lft > ${lft}"
-        def sql_rgt = "UPDATE ${cname} SET rgt = rgt - ${gapsize}${lastUpdatedQuery}${versionQuery} WHERE rgt > ${lft}"
+        def sql_lft = "UPDATE ${cname} SET lft = lft - ${gapsize}${versionQuery} WHERE lft > ${lft}"
+        def sql_rgt = "UPDATE ${cname} SET rgt = rgt - ${gapsize}${versionQuery} WHERE rgt > ${lft}"
 
-        def now = new Date()
-        this.executeUpdate(sql_lft, params)
-        this.executeUpdate(sql_rgt, params)
+        this.executeUpdate(sql_lft)
+        this.executeUpdate(sql_rgt)
     }
 
     void b4Insert() {
@@ -472,5 +467,5 @@ trait NestedsetTrait {
         }
     }
 
-    static void afterTreeChanged() { /* Do nothing */}
+    static void afterTreeChanged() { /* Do nothing */ }
 }
